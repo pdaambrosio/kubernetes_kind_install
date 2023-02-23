@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-dev-deployment
+  namespace: jenkins
+  labels:
+    app: jenkins-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-dev
+  template:
+    metadata:
+      name: jenkins-dev-replicaset
+      labels:
+        app: jenkins-dev
+    spec:
+      hostAliases:
+      - ip: "172.18.255.200"
+        hostnames:
+        - "sonar-dev.ttechcloud.com"
+        - "jenkins-dev.ttechcloud.com"
+      containers:
+        - name: jenkins-dev-pod
+          image: ttechcloud/jenkins-lts:1.5.0
+          # env:
+          #   - name: https_proxy
+          #     value: "http://10.104.244.78:8080"
+          #   - name: http_proxy
+          #     value: "http://10.104.244.78:8080"  
+          ports:
+          -  name: http-port
+             containerPort: 8080
+          -  name: jnlp-port
+             containerPort: 50000
+          # volumeMounts:
+          # - name: jenkins-volume
+          #   mountPath: /var/jenkins_home
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "1.0"
+            limits:
+              memory: "2Gi"
+              cpu: "2.0"
+          livenessProbe:
+            httpGet:
+              path: "/login"
+              port: 8080
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: "/login"
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      # volumes:
+      #   - name: jenkins-volume
+      #     persistentVolumeClaim:
+      #       claimName: jenkins-volv-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-dev-service
+  namespace: jenkins
+  labels:
+    app: jenkins-dev
+spec:
+  type: NodePort
+  ports:
+    - name: jenkins-web
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+    - name: jenkins-worker
+      port: 50000
+      targetPort: 50000
+  selector:
+    app: jenkins-dev
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jenkins-ingress
+  namespace: jenkins
+spec:
+  rules:
+  - host: jenkins-dev.ttechcloud.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: jenkins-dev-service
+            port:
+              number: 8080
