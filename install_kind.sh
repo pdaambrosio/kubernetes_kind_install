@@ -4,10 +4,10 @@ set -o nounset
 set -o pipefail
 
 # Install kind
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.17.0/kind-linux-amd64
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.26.0/kind-linux-amd64
 chmod +x ./kind
 mv ./kind /usr/local/bin/
-echo "source <(kind completion bash)" >> ~/.zshrc
+echo "source <(kind completion zsh)" >> ~/.zshrc
 echo "kind installed"
 
 # Install kubectl
